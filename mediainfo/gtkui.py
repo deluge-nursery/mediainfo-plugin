@@ -50,22 +50,33 @@ from common import get_resource
 
 class MediaInfoDialog(object):
     def __init__(self):
-        pass
+        version = deluge.common.get_version()
+        if version < '2.0':
+            log.debug('version: %s. using glade' % version)
+            self.glade = gtk.glade.XML(get_resource('mediainfo.glade'))
+            self.window = self.glade.get_widget('mediainfoWindow')
+            self.buffer = self.glade.get_widget('textviewMediaInfo').get_buffer()
+            self.glade.signal_autoconnect({
+                'on_close_clicked': self.on_close_clicked
+            })
+        else:
+            log.debug('version: %s. using Builder' % version)
+            self.builder = gtk.Builder()
+            self.builder.add_from_file(get_resource('mediainfo.ui'))
+            self.window = self.builder.get_object('dlg_mediainfo')
+            self.buffer = self.builder.get_object('textviewMediaInfo').get_buffer()
+            self.builder.connect_signals(self)
+        self.window.set_transient_for(component.get('MainWindow').window)
+        self.window.set_title('MediaInfo - Deluge')
 
     def show(self, media_info):
-        self.builder = gtk.Builder()
-        self.builder.add_from_file(get_resource('mediainfo.ui'))
-        self.dialog = self.builder.get_object('dlg_mediainfo')
-        self.buffer = self.builder.get_object('textviewMediaInfo').get_buffer()
-        self.dialog.set_transient_for(component.get("MainWindow").window)
-        self.builder.connect_signals(self)
         log.debug('showing mediainfo')
         self.buffer.set_text(media_info)
-        self.dialog.run()
+        self.window.show()
 
     def on_close_clicked(self, event=None):
         log.debug('closing mediainfo')
-        self.dialog.destroy()
+        self.window.destroy()
 
 
 class GtkUI(GtkPluginBase):
@@ -87,7 +98,7 @@ class GtkUI(GtkPluginBase):
     def disable(self):
         log.debug('removing menu items')
         if self.media_info_button in self.file_menu.get_children():
-            self.file_menu.remove(self.media_info_button)
+            self.file_menu. remove(self.media_info_button)
             self.file_menu.remove(self.media_info_separator)
         # self.files_tab.listview.disconnect(self.connector_id)
 
