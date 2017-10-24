@@ -1,7 +1,8 @@
 #!/bin/bash
-cd D:\progrmming\python\mediainfo
-mkdir temp
-export PYTHONPATH=./temp
-C:\Python27\python.exe setup.py build develop --install-dir ./temp
-cp ./temp/MediaInfo.egg-link C:\Users\Ido\AppData\Roaming\deluge\/plugins
-rm -fr ./temp
+BUILD_DIRECTORY="/tmp/build_mediainfo-plugin_$(date +%s)"
+mkdir -p $BUILD_DIRECTORY
+export PYTHONPATH=$BUILD_DIRECTORY
+env python2 setup.py build develop --install-dir $BUILD_DIRECTORY/
+cp $BUILD_DIRECTORY/MediaInfo.egg-link ~/.config/deluge/plugins
+rm -rf $BUILD_DIRECTORY
+
