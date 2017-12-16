@@ -52,7 +52,7 @@ class MediaInfoDialog(object):
     def __init__(self):
         version = deluge.common.get_version()
         if version < '2.0':
-            log.debug('version: %s. using glade' % version)
+            log.debug('mediainfo: deluge version is "%s". using glade' % version)
             self.glade = gtk.glade.XML(get_resource('mediainfo.glade'))
             self.window = self.glade.get_widget('mediainfoWindow')
             self.buffer = self.glade.get_widget('textviewMediaInfo').get_buffer()
@@ -60,7 +60,7 @@ class MediaInfoDialog(object):
                 'on_close_clicked': self.on_close_clicked
             })
         else:
-            log.debug('version: %s. using Builder' % version)
+            log.debug('mediainfo: deluge version is "%s". using Builder' % version)
             self.builder = gtk.Builder()
             self.builder.add_from_file(get_resource('mediainfo.ui'))
             self.window = self.builder.get_object('dlg_mediainfo')
@@ -70,22 +70,20 @@ class MediaInfoDialog(object):
         self.window.set_title('MediaInfo - Deluge')
 
     def show(self, media_info):
-        log.debug('showing mediainfo')
+        log.debug('mediainfo: showing mediainfo')
         self.buffer.set_text(media_info)
         self.window.show()
 
     def on_close_clicked(self, event=None):
-        log.debug('closing mediainfo')
+        log.debug('mediainfo: closing mediainfo')
         self.window.destroy()
 
 
 class GtkUI(GtkPluginBase):
     def enable(self):
         self.files_tab = component.get('TorrentDetails').tabs['Files']
-        # self.connector_id = self.files_tab.listview.connect('button-press-event', self.on_button_press_event)
-        # print(self.connector_id)
 
-        log.debug('creating menu items')
+        log.debug('mediainfo: creating menu items')
         self.file_menu = self.files_tab.file_menu
         self.media_info_separator = gtk.SeparatorMenuItem()
         self.media_info_button = gtk.MenuItem(_('MediaInfo'))
@@ -94,34 +92,34 @@ class GtkUI(GtkPluginBase):
         self.media_info_button.connect('activate', self._on_media_info_activate)
         self.file_menu.append(self.media_info_button)
         self.media_info_button.show()
+        log.debug('mediainfo: connecting handler')
+        self.connector_id = self.file_menu.connect('show', self.on_popup_show)
 
     def disable(self):
-        log.debug('removing menu items')
+        log.debug('mediainfo: removing menu items')
         if self.media_info_button in self.file_menu.get_children():
-            self.file_menu. remove(self.media_info_button)
+            self.file_menu.remove(self.media_info_button)
             self.file_menu.remove(self.media_info_separator)
-        # self.files_tab.listview.disconnect(self.connector_id)
+        self.file_menu.disconnect(self.connector_id)
 
     def _on_media_info_activate(self, menuitem):
-        log.debug('menu button clicked')
+        log.debug('mediainfo: menu button clicked')
         file_index = filter(lambda index: index != -1, self.files_tab.get_selected_files())[0]
         torrent_id = self.files_tab.torrent_id
         self.media_info_dialog = MediaInfoDialog()
         client.mediainfo.get_media_info(torrent_id, file_index).addCallback(self._on_media_info)
 
     def _on_media_info(self, media_info):
-        log.debug('got mediainfo data')
+        log.debug('mediainfo got mediainfo data')
         if media_info is not None:
             self.media_info_dialog.show(media_info)
 
-    def on_button_press_event(self, widget, event):
-        log.debug('mediainfo on_button_press_event')
-        if event.button == 3:
-            log.debug('left click')
-            selected = filter(lambda index: index != -1, self.files_tab.get_selected_files())
-            if len(selected) > 1:
-                log.debug('> 1')
-                self.media_info_button.set_sensitive(False)
-            else:
-                log.debug('<= 1')
-                self.media_info_button.set_sensitive(True)
+    def on_popup_show(self, widget):
+        log.debug('mediainfo: on_popup_show')
+        selected = filter(lambda index: index != -1, self.files_tab.get_selected_files())
+        if len(selected) > 1:
+            log.debug('> 1')
+            self.media_info_button.set_sensitive(False)
+        else:
+            log.debug('<= 1')
+            self.media_info_button.set_sensitive(True)
